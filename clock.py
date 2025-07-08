@@ -1,7 +1,7 @@
 import socket
 import time
 
-class Clock():
+class Clock:
     # delay foi convertido de 100 ms para 0.1 s
     def __init__(self, porta_emissor=4001, porta_escalonador=4002, delay=0.1):
         self.valor_clock = 0
