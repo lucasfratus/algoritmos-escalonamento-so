@@ -15,3 +15,23 @@ class Clock():
 
     def enviar_mensagem(self, destino, mensagem):
         self.socket.sendto(mensagem.encode(), destino)
+    
+    def iniciar_clock(self):
+        print("[Clock]: Iniciando...")
+        while True:
+            mensagem = f"CLOCK {self.valor_clock}"
+
+            # Envio da mensagem para o emissor de tarefas
+            self.enviar_mensagem(self.endereco_emissor, mensagem)
+            print(f"[Clock {self.valor_clock}]: Mensagem enviada ao emissor de tarefas ")
+
+            time.sleep(self.delay_escalonador) # Delay de 5ms
+
+            # Envio da mensagem para o escalonador de tarefas
+            self.enviar_mensagem(self.endereco_escalonador, mensagem)
+            print(f"[Clock {self.valor_clock}]: Mensagem enviada ao escalonador de tarefas ")
+
+            # Tempo do incremento (Subtrair o número 5 de 100?)
+            time.sleep(self.delay_por_incremento - self.delay_escalonador)
+
+            self.valor_clock += 1
