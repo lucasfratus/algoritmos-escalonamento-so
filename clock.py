@@ -31,7 +31,7 @@ class Clock:
             self.enviar_mensagem(self.endereco_escalonador, mensagem)
             print(f"[Clock {self.valor_clock}]: Mensagem enviada ao escalonador de tarefas ")
 
-            # Tempo do incremento (Subtrair o número 5 de 100?)
-            time.sleep(self.delay_por_incremento - self.delay_escalonador)
+            # Tempo do incremento (Subtrair o número 5 de 100?) - Não
+            time.sleep(self.delay_por_incremento)
 
             self.valor_clock += 1
