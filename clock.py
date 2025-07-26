@@ -10,12 +10,15 @@ class Clock:
         self.delay_por_incremento = delay # 100 ms = 0.1s
         self.delay_escalonador = 0.005 # 5 ms
         
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print("[Clock]: Socket inicializado.")
 
     def enviar_mensagem(self, destino, mensagem):
-        self.socket.sendto(mensagem.encode(), destino)
-    
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(destino)
+                s.sendall(mensagem.encode())
+        except ConnectionRefusedError:
+            print(f"[Clock]: Falha ao conectar em {destino}")
+
     def iniciar_clock(self):
         print("[Clock]: Iniciando...")
         while True:

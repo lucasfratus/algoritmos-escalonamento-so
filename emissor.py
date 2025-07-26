@@ -8,11 +8,7 @@ class Emissor:
     def __init__(self, caminho_arquivo, porta_escuta=4001, porta_escalonador=4002, porta_emissor=4000):
         self.tarefas = self.carregar_tarefas(caminho_arquivo)
         self.porta_escuta = porta_escuta
-        self.endereco_emissor = ('localhost', porta_emissor)
         self.endereco_escalonador = ('localhost', porta_escalonador)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(('localhost', porta_escuta))
-        print(f"[Emissor]: Escutando a porta {porta_escuta}")
 
         # Indice da tarefa que será emitida
         self.indice_tarefa = 0
@@ -33,39 +29,54 @@ class Emissor:
                     tarefas.append(tarefa)
         return tarefas
     
+
     def emitir_tarefa(self, tarefa):
         mensagem = f"{tarefa['id']};{tarefa['duracao_prevista']};{tarefa['prioridade']}"
-        self.socket.sendto(mensagem.encode(), self.endereco_escalonador)
-        print(f"[Emissor]: Enviou a tarefa {mensagem}")
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(self.endereco_escalonador)
+                s.sendall(mensagem.encode())
+                print(f"[Emissor]: Enviou a tarefa {mensagem}")
+        except ConnectionRefusedError:
+            print("[Emissor]: Não conseguiu conectar ao escalonador")
     
+
     def iniciar(self):
 
         threading.Thread(target=self.clock.iniciar_clock, daemon=True).start()
 
-        print("[Emissor]: Aguardando clock...")
-
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('localhost', self.porta_escuta))
+        s.listen()
 
         while self.indice_tarefa < self.total_tarefas:
-            dados, x = self.socket.recvfrom(1024) # Talvez tenha que mudar isso aqui para 1024
-            msg = dados.decode()
+            conn, addr = s.accept()
+            with conn:
+                msg = conn.recv(1024).decode()
 
-            if msg.startswith("CLOCK"):
-                clock = int(msg.split()[1])
-                print(f"[Emissor] Recebeu Clock {clock}")
+                if msg.startswith("CLOCK"):
+                    clock = int(msg.split()[1])
+                    print(f"[Emissor] Recebeu Clock {clock}")
 
-                # Verifica quais tarefas devem ser emitidas no clock atual
-                while self.indice_tarefa < self.total_tarefas and self.tarefas[self.indice_tarefa]['ingresso'] == clock:
-                    tarefa = self.tarefas[self.indice_tarefa]
-                    self.emitir_tarefa(tarefa)
-                    self.indice_tarefa += 1
+                    # Verifica quais tarefas devem ser emitidas no clock atual
+                    while self.indice_tarefa < self.total_tarefas and self.tarefas[self.indice_tarefa]['ingresso'] == clock:
+                        tarefa = self.tarefas[self.indice_tarefa]
+                        self.emitir_tarefa(tarefa)
+                        self.indice_tarefa += 1
 
         # Envia um sinal que indica o FIM ao escalonador
-        self.socket.sendto("-1".encode(), self.endereco_escalonador)
-        print(f"[Emissor] Todas as tarefas foram emitidas ao escalonador. Enviando sinal de fim (-1)")
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
+                s1.connect(self.endereco_escalonador)
+                s1.sendall("-1".encode())
+                print(f"[Emissor]: Enviou sinal de fim (-1)")
+        except ConnectionRefusedError:
+            print(f"[Emissor]: Não conseguiu enviar sinal de fim ao escalonador")
 
-        self.socket.close() # "Fecha" o sinal do socket
+        s.close() # "Fecha" o sinal do socket
         print(f"[Emissor]: Encerrado.")
 
 if __name__ == "__main__":
     emissor = Emissor("tarefas.txt")
     emissor.iniciar()
+    print(emissor.tarefas)
