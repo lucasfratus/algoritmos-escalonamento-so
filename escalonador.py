@@ -5,20 +5,19 @@ import math
 
 
 class Escalonador:
-    def __init__(self, algoritmo, porta_escuta=4002, porta_clock=4000, porta_emissor=4001):
-        self.porta_escuta = porta_escuta
-        self.endereco_clock = ('localhost', porta_clock)
-        self.endereco_emissor = ('localhost', porta_emissor)
+    def __init__(self, algoritmo, porta_clock=4000, porta_emissor=4001, porta_escalonador=4002):
         self.algoritmo = algoritmo
-
-        self.fila_prontas = []
+        self.fila_tarefas_prontas = []
+        self.todas_tarefas_recebidas = False
         self.clock_atual = 0
-        self.todas_tarefas_recebidas = False 
 
         self.tempo_restante = {} # algoritmo preemptivo
 
         self.lista_saida = []
         self.registro_tarefas = {} # id ->  [ingresso, fim, turnaround, waiting]
+
+        self.endereco_clock = ('localhost', porta_clock)
+        self.endereco_emissor = ('localhost', porta_emissor)
 
     def enviar_mensagem(self, destino, mensagem):
         try:
@@ -31,7 +30,7 @@ class Escalonador:
 
     def receber_conexoes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('localhost', self.porta_escuta))
+        s.bind(('localhost', self.porta_escalonador))
         s.listen()
 
         while True:
@@ -52,7 +51,7 @@ class Escalonador:
                 else:
                     tarefa = self.converter_tarefa(msg)
                     print(f"[Escalonador]: Tarefa recebida {tarefa}")
-                    self.fila_prontas.append(tarefa)
+                    self.fila_tarefas_prontas.append(tarefa)
                     self.registro_tarefas[tarefa['id']] = [self.clock_atual] # salva ingresso
                     self.tempo_restante[tarefa['id']] = tarefa['duracao']
 
@@ -65,7 +64,7 @@ class Escalonador:
 
 
     def verificar_encerramento(self):
-        if self.todas_tarefas_recebidas and not self.fila_prontas:
+        if self.todas_tarefas_recebidas and not self.fila_tarefas_prontas:
             print("[Escalonador]: Todas as tarefas finalizadas. Encerrando.")
 
             ## Envio de mensagem de fim para clock e Emissor
@@ -77,5 +76,3 @@ class Escalonador:
 
     def gerar_arquivo_saida(self):
         pass
-
-
