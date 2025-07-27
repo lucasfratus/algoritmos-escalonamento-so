@@ -3,10 +3,11 @@ import threading
 import sys
 import math 
 
-
 class Escalonador:
     def __init__(self, algoritmo, porta_clock=4000, porta_emissor=4001, porta_escalonador=4002):
         self.clock_atual = 0
+        self.quantum = 2
+        self.quantum_restante = 0
         self.fila_tarefas_prontas = []
         self.tarefa_em_execucao = None
         self.todas_tarefas_emitidas = False
@@ -20,21 +21,12 @@ class Escalonador:
         self.endereco_emissor = ('localhost', porta_emissor)
         self.selecionador_de_algoritmo = {
             'fcfs': self._escalonar_fcfs,
+            'rr': self._escalonar_rr,
             'sjf': self._escalonar_sjf,
             'srtf': self._escalonar_srtf,
-            'rr': self._escalonar_rr,
             'prioc': self._escalonar_prioc,
             'priop': self._escalonar_priop,
             'priod': self._escalonar_priod
-        }
-
-    def converter_tarefa(self, msg):
-        id, duracao, prioridade = msg.split(";")
-        return {
-            'id': id,
-            'duracao': int(duracao),
-            'prioridade': int(prioridade),
-            'tempo_restante': int(duracao)
         }
 
     def enviar_mensagem(self, destino, mensagem):
@@ -45,6 +37,16 @@ class Escalonador:
         except ConnectionRefusedError:
             print(f"[Escalonador]: Falha ao conectar {destino}")
     
+    def converter_tarefa(self, msg):
+        id, duracao, prioridade = msg.split(";")
+        return {
+            'id': id,
+            'duracao': int(duracao),
+            'tempo_restante': int(duracao),
+            'prioridade_estatica': int(prioridade),
+            'prioridade': int(prioridade)
+        }
+    
     def encerramento(self):
         print("[Escalonador]: Todas as tarefas finalizadas. Enviando sinal de fim ao Clock e ao Emissor...")
         # Envio de sinal de fim para Clock e Emissor
@@ -52,6 +54,7 @@ class Escalonador:
         self.enviar_mensagem(self.endereco_emissor, "FIM")
 
         self.gerar_arquivo_saida()
+        print(self.lista_tarefas_escalonadas)
         sys.exit(0)
 
     def escalonamento_main(self):
@@ -90,8 +93,15 @@ class Escalonador:
         for tarefa in self.fila_tarefas_prontas:
             self.registro_tarefas[tarefa['id']]['waiting_time'] += 1
 
+        if self.algoritmo == 'priod':
+            for tarefa in self.fila_tarefas_prontas:
+                if tarefa['prioridade'] > 0:
+                    tarefa['prioridade'] -= 1
+
         if self.tarefa_em_execucao:
             self.tarefa_em_execucao['tempo_restante'] -= 1
+            if self.algoritmo == 'rr':
+                self.quantum_restante -= 1
 
         # Verifica término da tarefa no processador
         if self.tarefa_em_execucao and self.tarefa_em_execucao['tempo_restante'] == 0:
@@ -126,10 +136,95 @@ class Escalonador:
     def gerar_arquivo_saida(self):
         pass
 
-    def _escalonar_fcfs(self): pass
-    def _escalonar_sjf(self): pass
-    def _escalonar_srtf(self): pass
-    def _escalonar_rr(self): pass
-    def _escalonar_prioc(self): pass
-    def _escalonar_priop(self): pass
-    def _escalonar_priod(self): pass
+    def _escalonar_fcfs(self):
+        # First-Come, First Served
+        if self.tarefa_em_execucao is not None or not self.fila_tarefas_prontas:
+            return
+
+        self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+        print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou sua execução. (FCFS)")
+
+    def _escalonar_rr(self):
+        # Roud-Robin
+        if self.tarefa_em_execucao and self.quantum_restante == 0:
+            print(f"[Escalonador CLOCK {self.clock_atual}]: Quantum da tarefa {self.tarefa_em_execucao['id']} expirou. Ocorrendo preempção...")
+            self.fila_tarefas_prontas.append(self.tarefa_em_execucao)
+            self.tarefa_em_execucao = None
+        
+        if self.tarefa_em_execucao is None and self.fila_tarefas_prontas:
+            self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+            self.quantum_restante = self.quantum
+            print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou sua execução (RR).")
+
+    def _escalonar_sjf(self):
+        # Shortest Job First
+        if self.tarefa_em_execucao is not None or not self.fila_tarefas_prontas:
+            return
+
+        self.fila_tarefas_prontas = sorted(self.fila_tarefas_prontas, key= lambda t: t['duracao'])
+        self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+        print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou sua execução. (SJF)")
+
+    def _escalonar_srtf(self):
+        # Shortest Remaining Time First
+        if not self.fila_tarefas_prontas:
+            return
+        
+        self.fila_tarefas_prontas.sort(key=lambda t: t['tempo_restante'])
+        candidata = self.fila_tarefas_prontas[0]
+        if self.tarefa_em_execucao is not None:
+            if candidata['tempo_restante'] < self.tarefa_em_execucao['tempo_restante']:
+                print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {candidata['id']} é melhor que {self.tarefa_em_execucao['id']}.")
+                self.fila_tarefas_prontas.append(self.tarefa_em_execucao)
+                self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+        else:
+            self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+            print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou (SRTF).")
+
+    def _escalonar_prioc(self):
+        # Escalonamento por Prioridades Fixas Cooperativo
+        if self.tarefa_em_execucao is not None or not self.fila_tarefas_prontas:
+            return
+
+        self.fila_tarefas_prontas.sort(key=lambda t: t['prioridade_estatica'])
+        self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+        print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou sua execução (PRIOc).")
+
+    def _escalonar_priop(self):
+        # Escalonamento por Prioridades Preemptivo
+        if not self.fila_tarefas_prontas:
+            return
+
+        self.fila_tarefas_prontas.sort(key=lambda t: t['prioridade_estatica'])
+        candidata = self.fila_tarefas_prontas[0]
+
+        if self.tarefa_em_execucao is not None:
+            if candidata['prioridade_estatica'] < self.tarefa_em_execucao['prioridade_estatica']:
+                print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {candidata['id']} (P{candidata['prioridade_estatica']}) é melhor que {self.tarefa_em_execucao['id']} (P{self.tarefa_em_execucao['prioridade_estatica']}).")
+                self.fila_tarefas_prontas.append(self.tarefa_em_execucao)
+                self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+        else:
+            self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+            id_tarefa = self.tarefa_em_execucao['id']
+            print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {id_tarefa} iniciou (PRIOp).")
+
+    def _escalonar_priod(self):
+        # Escalonamento por Prioridades Dinâmicas
+        if not self.fila_tarefas_prontas:
+            return
+
+        self.fila_tarefas_prontas.sort(key=lambda t: t['prioridade'])
+        candidata = self.fila_tarefas_prontas[0]
+
+        if self.tarefa_em_execucao is not None:
+            if candidata['prioridade'] < self.tarefa_em_execucao['prioridade']:
+                print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {candidata['id']} (P{candidata['prioridade']}) é melhor que {self.tarefa_em_execucao['id']} (P{self.tarefa_em_execucao['prioridade']}).")
+                self.fila_tarefas_prontas.append(self.tarefa_em_execucao)
+                self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+
+                self.tarefa_em_execucao['prioridade'] = self.tarefa_em_execucao['prioridade_estatica']
+                print(f"[Escalonador]: Prioridade da tarefa {self.tarefa_em_execucao['id']} resetada para {self.tarefa_em_execucao['prioridade_estatica']}.")
+        else:
+            self.tarefa_em_execucao = self.fila_tarefas_prontas.pop(0)
+            self.tarefa_em_execucao['prioridade'] = self.tarefa_em_execucao['prioridade_estatica']
+            print(f"[Escalonador CLOCK {self.clock_atual}]: Tarefa {self.tarefa_em_execucao['id']} iniciou (PRIOD). Prioridade resetada para {self.tarefa_em_execucao['prioridade_estatica']}.")
