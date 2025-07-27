@@ -30,9 +30,15 @@ if __name__ == "__main__":
         processo_emissor.start()
         processo_escalonador.start()
 
-        # Espera os processos terminarem e os encerra
+        # Espera os processos terminarem
         processo_escalonador.join()
-        processo_clock.terminate()
-        processo_emissor.terminate()
+        processo_clock.join(timeout=2)
+        processo_emissor.join(timeout=2)
+
+        # Força parada caso não terminem
+        if processo_clock.is_alive():
+            processo_clock.terminate()
+        if processo_emissor.is_alive():
+            processo_emissor.terminate()
         
         print("[Main]: Simulação finalizada.")
