@@ -20,9 +20,9 @@ if __name__ == "__main__":
         escalonador = Escalonador(algoritmo)
 
         # Cria os processos
-        processo_clock = multiprocessing.Process(target=clock.iniciar_clock)
-        processo_emissor = multiprocessing.Process(target=emissor.iniciar)
-        processo_escalonador = multiprocessing.Process(target=escalonador.receber_conexoes)
+        processo_clock = multiprocessing.Process(target=clock.clock_main)
+        processo_emissor = multiprocessing.Process(target=emissor.emissor_main)
+        processo_escalonador = multiprocessing.Process(target=escalonador.escalonamento_main)
 
         # Inicia e executa os processos
         print("[Main]: Iniciando a simulação...")

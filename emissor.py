@@ -43,7 +43,7 @@ class Emissor:
             print("[Emissor]: Não conseguiu conectar ao Escalonador.")
     
 
-    def iniciar(self):
+    def emissor_main(self):
         # Envia sinal de início ao Clock
         print("[Emissor]: Tarefas carregadas. Enviando sinal de início para o Clock...")
         try:

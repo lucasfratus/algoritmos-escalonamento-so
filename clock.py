@@ -23,7 +23,7 @@ class Clock:
             print(f"[Clock]: Falha ao conectar em {destino}.")
             return
 
-    def iniciar_clock(self):
+    def clock_main(self):
         print("[Clock] Aguardando sinal do emissor para iniciar...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('localhost', self.porta_clock))

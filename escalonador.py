@@ -54,7 +54,7 @@ class Escalonador:
         self.gerar_arquivo_saida()
         sys.exit(0)
 
-    def receber_conexoes(self):
+    def escalonamento_main(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('localhost', self.porta_escalonador))
         s.listen()
