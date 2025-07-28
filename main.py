@@ -27,8 +27,8 @@ if __name__ == "__main__":
         # Inicia e executa os processos
         print("[Main]: Iniciando a simulação...")
         processo_clock.start()
-        processo_emissor.start()
         processo_escalonador.start()
+        processo_emissor.start()
 
         # Espera os processos terminarem
         processo_escalonador.join()

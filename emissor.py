@@ -1,7 +1,4 @@
 import socket
-import sys
-import threading
-from clock import Clock
 
 class Emissor:
     def __init__(self, caminho_arquivo, porta_clock=4000, porta_emissor=4001, porta_escalonador=4002):
