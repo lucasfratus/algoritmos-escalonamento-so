@@ -1,5 +1,7 @@
 import socket
 import sys
+import math
+
 
 class Escalonador:
     def __init__(self, algoritmo, porta_clock=4000, porta_emissor=4001, porta_escalonador=4002):
@@ -141,7 +143,29 @@ class Escalonador:
         self.dinamica_restante = True
 
     def gerar_arquivo_saida(self):
-        pass
+        with open("saida.txt", "w") as f:
+            linha_execucao = ";".join(self.lista_tarefas_escalonadas)
+            f.write(linha_execucao + "\n")
+
+            soma_turnaround = 0
+            soma_waiting = 0
+            total_tarefas = len(self.registro_tarefas)
+
+            for id_tarefa in sorted(self.registro_tarefas.keys()):
+                dados = self.registro_tarefas[id_tarefa]
+                ingresso = dados['ingresso']
+                fim = dados['fim']
+                turnaround = dados['turnaround']
+                waiting = dados['waiting_time']
+                soma_turnaround += turnaround
+                soma_waiting += waiting
+                f.write(f"{id_tarefa};{ingresso};{fim};{turnaround};{waiting}\n")
+
+            # 3. Médias com 1 casa decimal, arredondadas para cima
+            media_turnaround = math.ceil((soma_turnaround / total_tarefas) * 10) / 10
+            media_waiting = math.ceil((soma_waiting / total_tarefas) * 10) / 10
+            f.write(f"{media_turnaround:.1f};{media_waiting:.1f}\n")
+
 
     def _escalonar_fcfs(self):
         # First-Come, First Served
