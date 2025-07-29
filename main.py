@@ -25,7 +25,7 @@ if __name__ == "__main__":
         processo_escalonador = multiprocessing.Process(target=escalonador.escalonamento_main)
 
         # Inicia e executa os processos
-        print("[Main]: Iniciando a simulação...")
+        print("[Main]: Iniciando a simulação...\n")
         processo_clock.start()
         processo_escalonador.start()
         processo_emissor.start()
@@ -41,4 +41,4 @@ if __name__ == "__main__":
         if processo_emissor.is_alive():
             processo_emissor.terminate()
         
-        print("[Main]: Simulação finalizada.")
+        print("\n[Main]: Simulação finalizada.")

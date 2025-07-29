@@ -20,11 +20,12 @@ class Clock:
                 s.connect(destino)
                 s.sendall(mensagem.encode())
         except ConnectionRefusedError:
-            print(f"[Clock]: Falha ao conectar em {destino}.")
+            print(f"[T{self.valor_clock} - Clock]: Falha ao conectar em {destino}.")
             return
 
     def clock_main(self):
-        print("[Clock] Aguardando sinal do emissor para iniciar...")
+        # Aguarda o sinal do emissor para iniciar a contagem
+        print(f"[T{self.valor_clock} - Clock] Aguardando sinal do emissor para iniciar...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('localhost', self.porta_clock))
             s.listen()
@@ -32,9 +33,9 @@ class Clock:
             with conn:
                 msg = conn.recv(1024).decode()
                 if msg != "START CLOCK":
-                    print(f"[Clock]: Sinal inválido '{msg}' recebido. Encerrando...")
+                    print(f"[T{self.valor_clock} - Clock]: Sinal inválido '{msg}' recebido. Encerrando...")
                     return
-                print("[Clock]: Sinal de início recebido do Emissor.")
+                print(f"[T{self.valor_clock} - Clock]: Sinal de início recebido do Emissor.")
 
         # Abertura do Socket para receber sinal do Escalonador ao final da simulação
         se = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,20 +44,20 @@ class Clock:
         se.listen()
         se.setblocking(False)  # Não-bloqueante
 
-        print("[Clock]: Iniciando contagem...")
+        print(f"[T{self.valor_clock} - Clock]: Iniciando contagem...")
         try:
             while True:
                 mensagem = f"CLOCK {self.valor_clock}"
 
                 # Envio da mensagem para o Emissor
                 self.enviar_mensagem(self.endereco_emissor, mensagem)
-                print(f"[Clock {self.valor_clock}]: Mensagem enviada ao emissor de tarefas ")
+                print(f"[T{self.valor_clock} - Clock]: Mensagem enviada ao emissor de tarefas.")
 
                 time.sleep(self.delay_escalonador) # Delay de 5ms
 
                 # Envio da mensagem para o Escalonador
                 self.enviar_mensagem(self.endereco_escalonador, mensagem)
-                print(f"[Clock {self.valor_clock}]: Mensagem enviada ao escalonador de tarefas ")
+                print(f"[T{self.valor_clock} - Clock]: Mensagem enviada ao escalonador de tarefas.")
 
                 # Incrementa Clock
                 time.sleep(self.delay_por_incremento)
@@ -69,9 +70,9 @@ class Clock:
                     with conn:
                         msg = conn.recv(1024).decode()
                         if msg == "FIM":
-                            print("[Clock]: Sinal de encerramento recebido. Finalizando Clock.")
+                            print(f"[T{self.valor_clock} - Clock]: Sinal de encerramento recebido. Encerrando Clock...")
                             break
         finally:
             # Fecha o Socket
             se.close()
-            print("[Clock]: Encerrado.")
+            print(f"[T{self.valor_clock} - Clock]: Clock encerrado.")
