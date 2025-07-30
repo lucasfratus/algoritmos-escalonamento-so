@@ -32,7 +32,7 @@ class Emissor:
 
     def emitir_tarefa(self, tarefa):
         # Forma a mensagem com as informações da tarefa para enviá-la ao Escalonador
-        mensagem = f"{tarefa['id']};{tarefa['duracao_prevista']};{tarefa['prioridade']}"
+        mensagem = f"{tarefa['id']};{tarefa['ingresso']};{tarefa['duracao_prevista']};{tarefa['prioridade']}"
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect(self.endereco_escalonador)

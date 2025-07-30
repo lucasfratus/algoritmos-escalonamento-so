@@ -39,9 +39,10 @@ class Escalonador:
             print(f"[Escalonador]: Falha ao conectar {destino}")
     
     def converter_tarefa(self, msg):
-        id, duracao, prioridade = msg.split(";")
+        id, ingresso, duracao, prioridade = msg.split(";")
         return {
             'id': id,
+            'ingresso': int(ingresso),
             'duracao': int(duracao),
             'tempo_restante': int(duracao),
             'prioridade_estatica': int(prioridade),
@@ -85,7 +86,7 @@ class Escalonador:
                     print(f"[T{self.clock_atual} - Escalonador]: Tarefa {tarefa['id']} recebida do Emissor.")
                     self.fila_tarefas_prontas.append(tarefa)
                     self.registro_tarefas[tarefa['id']] = {
-                        'ingresso': self.clock_atual,
+                        'ingresso': tarefa['ingresso'],
                         'fim': -1, # Ainda não finalizou
                         'turnaround': -1, # Ainda não finalizou
                         'waiting_time': 0 # Começa com 0
@@ -98,9 +99,6 @@ class Escalonador:
                                 self.dinamica_restante = False
 
     def executar_escalonamento(self):
-        # Atualiza informações do registro
-        for tarefa in self.fila_tarefas_prontas:
-            self.registro_tarefas[tarefa['id']]['waiting_time'] += 1
 
         if self.tarefa_em_execucao:
             self.tarefa_em_execucao['tempo_restante'] -= 1
@@ -127,7 +125,8 @@ class Escalonador:
         # Verifica fim da simulação
         if self.todas_tarefas_emitidas and not self.fila_tarefas_prontas and self.tarefa_em_execucao is None:
             self.encerramento()
-        
+
+
         # Chama método de escalonamento
         try:
             funcao_escalonadora = self.selecionador_de_algoritmo[self.algoritmo]
@@ -144,6 +143,11 @@ class Escalonador:
             self.lista_tarefas_escalonadas.append('idle')
         
         self.dinamica_restante = True
+
+        # Atualiza informações do registro
+        for tarefa in self.fila_tarefas_prontas:
+            self.registro_tarefas[tarefa['id']]['waiting_time'] += 1
+
 
     def gerar_arquivo_saida(self):
         with open("saida.txt", "w") as f:
